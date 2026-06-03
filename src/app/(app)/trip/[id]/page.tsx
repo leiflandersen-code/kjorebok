@@ -95,7 +95,14 @@ export default function TripDetailPage() {
       }
     }
 
-    const { error } = await supabase.from('trips').update(form).eq('id', id)
+    // Only send actual DB columns — strip joined relations
+    const {
+      vehicle, customer, attachments, audit_log, user,
+      created_at, updated_at, id: _id,
+      ...updateData
+    } = form as Trip
+
+    const { error } = await supabase.from('trips').update(updateData).eq('id', id)
 
     if (error) {
       toast.error('Feil ved lagring')
