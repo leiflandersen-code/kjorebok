@@ -11,7 +11,7 @@
 
 import { Capacitor } from '@capacitor/core'
 
-const REVENUECAT_API_KEY_IOS = 'appl_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' // ← bytt ut
+const REVENUECAT_API_KEY_IOS = 'test_eAwVAZlGDTteVJbyVuctEpGyhZK'
 
 let initialized = false
 
