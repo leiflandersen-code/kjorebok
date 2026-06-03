@@ -10,14 +10,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import type { Profile, Vehicle, TripCategory } from '@/types'
-import { LogOut, Car, User, Plus, Trash2, Tag, Globe } from 'lucide-react'
+import { LogOut, Car, User, Plus, Trash2, Tag, Globe, Crown, AlertTriangle } from 'lucide-react'
 import type { Lang } from '@/lib/translations'
+import { useSubscription } from '@/hooks/useSubscription'
 
 export default function SettingsPage() {
   const router = useRouter()
   const { t, lang, setLang } = useLang()
   const CATEGORIES = Object.keys(t.categories) as TripCategory[]
 
+  const { status: subStatus, daysLeft } = useSubscription()
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [profileName, setProfileName] = useState('')
@@ -83,6 +86,33 @@ export default function SettingsPage() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  async function handleDeleteAccount() {
+    const confirmed = confirm(
+      lang === 'no'
+        ? 'Er du sikker på at du vil slette kontoen din? All data slettes permanent og kan ikke angres.'
+        : 'Are you sure you want to delete your account? All data will be permanently deleted and cannot be undone.'
+    )
+    if (!confirmed) return
+    const confirmed2 = confirm(
+      lang === 'no'
+        ? 'Siste sjanse: Alle turer, kunder og data slettes for alltid.'
+        : 'Last chance: All trips, customers and data will be deleted forever.'
+    )
+    if (!confirmed2) return
+
+    setDeletingAccount(true)
+    const supabase = createClient()
+    // Delete user data first (RLS will handle cascades)
+    if (profile) {
+      await supabase.from('trips').delete().eq('user_id', profile.id)
+      await supabase.from('vehicles').delete().eq('owner_id', profile.id)
+      await supabase.from('profiles').delete().eq('id', profile.id)
+    }
+    await supabase.auth.signOut()
+    router.push('/login')
+    setDeletingAccount(false)
   }
 
   return (
@@ -210,9 +240,83 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Button onClick={handleLogout} variant="outline" className="w-full h-12 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 cursor-pointer">
+      {/* Subscription */}
+      <Card className="bg-slate-900 border-slate-700 mb-4">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm text-slate-300 flex items-center gap-2">
+            <Crown size={14} className="text-amber-400" />
+            {lang === 'no' ? 'Abonnement' : 'Subscription'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          {subStatus === 'trial' && (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white text-sm font-medium">
+                  {lang === 'no' ? 'Prøveperiode' : 'Trial'}
+                </p>
+                <p className="text-slate-400 text-xs">
+                  {lang === 'no'
+                    ? `${daysLeft ?? '?'} dager igjen`
+                    : `${daysLeft ?? '?'} days remaining`}
+                </p>
+              </div>
+              <Button
+                onClick={() => router.push('/subscribe')}
+                size="sm"
+                className="bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
+              >
+                {lang === 'no' ? 'Oppgrader' : 'Upgrade'}
+              </Button>
+            </div>
+          )}
+          {subStatus === 'active' && (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400" />
+              <p className="text-green-400 text-sm font-medium">
+                {lang === 'no' ? 'Aktivt abonnement' : 'Active subscription'}
+              </p>
+            </div>
+          )}
+          {subStatus === 'free' && (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-amber-400" />
+              <p className="text-amber-400 text-sm font-medium">
+                {lang === 'no' ? 'Gratis tilgang (kode)' : 'Free access (promo code)'}
+              </p>
+            </div>
+          )}
+          {subStatus === 'expired' && (
+            <div className="flex items-center justify-between">
+              <p className="text-red-400 text-sm">
+                {lang === 'no' ? 'Abonnement utløpt' : 'Subscription expired'}
+              </p>
+              <Button
+                onClick={() => router.push('/subscribe')}
+                size="sm"
+                className="bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
+              >
+                {lang === 'no' ? 'Forny' : 'Renew'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Logout */}
+      <Button onClick={handleLogout} variant="outline" className="w-full h-12 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 cursor-pointer mb-3">
         <LogOut size={16} className="mr-2" />{t.settings.logout}
       </Button>
+
+      {/* Delete account */}
+      <button
+        onClick={handleDeleteAccount}
+        disabled={deletingAccount}
+        className="w-full text-slate-600 text-xs text-center py-2 hover:text-red-400 transition-colors cursor-pointer"
+      >
+        <AlertTriangle size={12} className="inline mr-1" />
+        {lang === 'no' ? 'Slett konto og all data' : 'Delete account and all data'}
+      </button>
 
       <p className="text-slate-600 text-xs text-center mt-6">{t.settings.footer}</p>
     </div>
