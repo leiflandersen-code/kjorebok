@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -17,9 +17,25 @@ export default function ResetPasswordPage() {
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [ready, setReady] = useState(false)
   const router = useRouter()
   const { lang } = useLang()
   const no = lang === 'no'
+
+  // Exchange the token from URL hash for a session
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash.includes('access_token')) { setReady(true); return }
+    const params = new URLSearchParams(hash.replace('#', ''))
+    const access_token = params.get('access_token')
+    const refresh_token = params.get('refresh_token') ?? ''
+    if (access_token) {
+      const supabase = createClient()
+      supabase.auth.setSession({ access_token, refresh_token }).then(() => setReady(true))
+    } else {
+      setReady(true)
+    }
+  }, [])
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault()
@@ -60,7 +76,11 @@ export default function ResetPasswordPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {done ? (
+            {!ready ? (
+              <div className="flex justify-center py-6">
+                <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : done ? (
               <div className="text-center space-y-3 py-2">
                 <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
                   <Car size={24} className="text-green-400" />
@@ -74,6 +94,7 @@ export default function ResetPasswordPage() {
               </div>
             ) : (
               <form onSubmit={handleReset} className="space-y-4">
+
                 <div className="space-y-2">
                   <Label className="text-slate-300">
                     {no ? 'Nytt passord' : 'New password'}
