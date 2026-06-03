@@ -24,21 +24,17 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
 
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
+    const supabase = createClient()
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
     })
 
-    if (res.status === 429) {
-      const data = await res.json()
-      toast.error(`For mange forsøk. Vent ${Math.ceil(data.retryAfter / 60)} min.`)
-    } else if (!res.ok) {
-      const data = await res.json()
-      toast.error(data.error ?? t.auth.loginError)
+    if (error) {
+      toast.error(error.message ?? t.auth.loginError)
     } else {
       toast.success(t.auth.registerSuccess)
-      const supabase = createClient()
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
       if (!loginError) {
         router.push('/dashboard')
