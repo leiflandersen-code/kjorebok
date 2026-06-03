@@ -49,7 +49,7 @@ export async function purchaseMonthly(): Promise<'success' | 'cancelled' | 'erro
     if (!pkg) return 'error'
 
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg })
-    const active = customerInfo.entitlements.active['pro']
+    const active = customerInfo.entitlements.active['TripLedgerPro']
     return active ? 'success' : 'error'
   } catch (e: any) {
     if (e?.userCancelled) return 'cancelled'
@@ -62,7 +62,7 @@ export async function restorePurchases(): Promise<boolean> {
   try {
     const { Purchases } = await import('@revenuecat/purchases-capacitor')
     const { customerInfo } = await Purchases.restorePurchases()
-    return !!customerInfo.entitlements.active['pro']
+    return !!customerInfo.entitlements.active['TripLedgerPro']
   } catch {
     return false
   }
@@ -73,7 +73,7 @@ export async function checkSubscriptionStatus(): Promise<'active' | 'inactive'> 
   try {
     const { Purchases } = await import('@revenuecat/purchases-capacitor')
     const { customerInfo } = await Purchases.getCustomerInfo()
-    return customerInfo.entitlements.active['pro'] ? 'active' : 'inactive'
+    return customerInfo.entitlements.active['TripLedgerPro'] ? 'active' : 'inactive'
   } catch {
     return 'inactive'
   }
