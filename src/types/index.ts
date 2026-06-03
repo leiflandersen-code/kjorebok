@@ -18,6 +18,11 @@ export interface Profile {
   default_vehicle_id: string | null
   default_category: string | null
   created_at: string
+  country_code: string | null
+  mileage_rate: number | null
+  currency_code: string | null
+  currency_symbol: string | null
+  country_selected_at: string | null
 }
 
 export interface Vehicle {
