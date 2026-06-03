@@ -74,17 +74,25 @@ export default function SubscribePage() {
   async function handlePromo() {
     if (!promoCode.trim()) return
     setPromoLoading(true)
-    const supabase = createClient()
 
-    const { data, error } = await supabase.rpc('redeem_promo_code', { p_code: promoCode.trim() })
+    const res = await fetch('/api/promo/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: promoCode.trim() }),
+    })
 
-    if (error || !data?.success) {
-      const key = data?.error ?? 'invalid_code'
-      toast.error(errorMessages[key] ?? (no ? 'Ugyldig kode' : 'Invalid code'))
+    if (res.status === 429) {
+      toast.error(no ? 'For mange forsøk. Prøv igjen om en time.' : 'Too many attempts. Try again in an hour.')
     } else {
-      setPromoSuccess(true)
-      toast.success(no ? 'Kode aktivert! Gratis tilgang aktivert.' : 'Code activated! Free access granted.')
-      setTimeout(() => router.push('/dashboard'), 1500)
+      const data = await res.json()
+      if (!data?.success) {
+        const key = data?.error ?? 'invalid_code'
+        toast.error(errorMessages[key] ?? (no ? 'Ugyldig kode' : 'Invalid code'))
+      } else {
+        setPromoSuccess(true)
+        toast.success(no ? 'Kode aktivert! Gratis tilgang aktivert.' : 'Code activated! Free access granted.')
+        setTimeout(() => router.push('/dashboard'), 1500)
+      }
     }
     setPromoLoading(false)
   }
