@@ -8,8 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import type { Profile, Vehicle } from '@/types'
-import { LogOut, Car, User, Plus, Trash2 } from 'lucide-react'
+import type { Profile, Vehicle, TripCategory } from '@/types'
+import { LogOut, Car, User, Plus, Trash2, Tag } from 'lucide-react'
+
+const CATEGORIES: TripCategory[] = [
+  'Næring', 'Privat', 'Kundevisning', 'Befaring', 'Innkjøp', 'Service/vedlikehold', 'Annet'
+]
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -17,6 +21,7 @@ export default function SettingsPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [profileName, setProfileName] = useState('')
   const [defaultVehicle, setDefaultVehicle] = useState('')
+  const [defaultCategory, setDefaultCategory] = useState<TripCategory>('Næring')
   const [newVehicle, setNewVehicle] = useState({ name: '', registration: '' })
   const [saving, setSaving] = useState(false)
 
@@ -35,6 +40,7 @@ export default function SettingsPage() {
       setProfile(prof)
       setProfileName(prof.name)
       setDefaultVehicle(prof.default_vehicle_id ?? '')
+      setDefaultCategory((prof.default_category as TripCategory) ?? 'Næring')
     }
     setVehicles(veh ?? [])
   }
@@ -46,6 +52,7 @@ export default function SettingsPage() {
     const { error } = await supabase.from('profiles').update({
       name: profileName,
       default_vehicle_id: defaultVehicle || null,
+      default_category: defaultCategory,
     }).eq('id', profile.id)
 
     if (error) toast.error('Feil ved lagring')
@@ -57,10 +64,7 @@ export default function SettingsPage() {
     if (!newVehicle.name.trim() || !newVehicle.registration.trim()) return
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('vehicles').insert({
-      ...newVehicle,
-      owner_id: user?.id,
-    })
+    const { error } = await supabase.from('vehicles').insert({ ...newVehicle, owner_id: user?.id })
     if (error) toast.error('Feil ved lagring')
     else {
       toast.success('Kjøretøy lagt til')
@@ -130,6 +134,41 @@ export default function SettingsPage() {
             className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
           >
             {saving ? 'Lagrer...' : 'Lagre profil'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Default category */}
+      <Card className="bg-slate-900 border-slate-700 mb-4">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm text-slate-300 flex items-center gap-2">
+            <Tag size={14} />
+            Standardkategori
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <p className="text-slate-500 text-xs mb-3">Velges automatisk når du starter en ny tur</p>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setDefaultCategory(cat)}
+                className={`text-sm px-3 py-2 rounded-xl border transition-colors cursor-pointer ${
+                  defaultCategory === cat
+                    ? 'bg-green-500 border-green-500 text-slate-900 font-semibold'
+                    : 'border-slate-600 text-slate-400 hover:border-slate-400'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <Button
+            onClick={saveProfile}
+            disabled={saving}
+            className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer mt-4"
+          >
+            {saving ? 'Lagrer...' : 'Lagre'}
           </Button>
         </CardContent>
       </Card>

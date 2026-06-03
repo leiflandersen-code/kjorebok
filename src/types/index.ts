@@ -16,6 +16,7 @@ export interface Profile {
   email: string
   name: string
   default_vehicle_id: string | null
+  default_category: string | null
   created_at: string
 }
 

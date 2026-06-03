@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import type { Trip, Vehicle, Customer, Profile, TripCategory, TripStatus, TripAuditLog } from '@/types'
 import { calculateReimbursement } from '@/lib/distance'
-import { ChevronLeft, Clock, Save, Paperclip, History, MapPin } from 'lucide-react'
+import { ChevronLeft, Clock, Save, Paperclip, History, MapPin, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 const CATEGORIES: TripCategory[] = [
@@ -28,6 +28,7 @@ export default function TripDetailPage() {
   const [auditLog, setAuditLog] = useState<(TripAuditLog & { editor?: Profile })[]>([])
   const [form, setForm] = useState<Partial<Trip>>({})
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
 
@@ -116,6 +117,20 @@ export default function TripDetailPage() {
     setSaving(false)
   }
 
+  async function handleDelete() {
+    if (!confirm('Vil du slette denne turen? Dette kan ikke angres.')) return
+    setDeleting(true)
+    const supabase = createClient()
+    const { error } = await supabase.from('trips').delete().eq('id', id)
+    if (error) {
+      toast.error('Feil ved sletting')
+      setDeleting(false)
+    } else {
+      toast.success('Tur slettet')
+      router.push('/trips')
+    }
+  }
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -165,6 +180,14 @@ export default function TripDetailPage() {
             Sist endret: {new Date(trip.updated_at).toLocaleString('nb-NO')}
           </p>
         </div>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="p-2 rounded-xl hover:bg-red-500/20 cursor-pointer transition-colors"
+          title="Slett tur"
+        >
+          <Trash2 size={18} className="text-red-400" />
+        </button>
         <Button
           onClick={handleSave}
           disabled={saving}

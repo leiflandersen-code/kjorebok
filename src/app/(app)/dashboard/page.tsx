@@ -99,7 +99,7 @@ export default function DashboardPage() {
         startTime: new Date().toISOString(),
         startLat: pos.lat,
         startLng: pos.lng,
-        category: 'Næring' as TripCategory,
+        category: (profile.default_category as TripCategory) ?? 'Næring',
         synced: false,
       }
       startTrip(trip)
