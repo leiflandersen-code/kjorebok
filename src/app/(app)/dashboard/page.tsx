@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import type { Profile, Vehicle, TripCategory } from '@/types'
 import { MapPin, Clock, TrendingUp, Euro, AlertTriangle, Navigation } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
+import { initRevenueCat } from '@/lib/revenuecat'
 
 function formatDuration(start: string): string {
   const diff = Date.now() - new Date(start).getTime()
@@ -59,7 +60,10 @@ export default function DashboardPage() {
     if (!user) return
 
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-    if (prof) setProfile(prof)
+    if (prof) {
+      setProfile(prof)
+      initRevenueCat(user.id) // Start RevenueCat med bruker-ID
+    }
 
     const { data: veh } = await supabase.from('vehicles').select('*')
     if (veh) {
