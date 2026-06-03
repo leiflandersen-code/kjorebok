@@ -58,6 +58,8 @@ export interface Trip {
   other_cost: number
   mileage_rate: number
   calculated_reimbursement: number | null
+  start_address: string | null
+  stop_address: string | null
   status: TripStatus
   created_at: string
   updated_at: string

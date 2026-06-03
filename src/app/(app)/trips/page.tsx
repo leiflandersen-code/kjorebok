@@ -90,6 +90,11 @@ export default function TripsPage() {
                             {trip.customer_free_text ?? trip.purpose}
                           </p>
                         )}
+                        {(trip.start_address || trip.stop_address) && (
+                          <p className="text-slate-500 text-xs mt-1 truncate">
+                            {trip.start_address ?? '?'} → {trip.stop_address ?? '?'}
+                          </p>
+                        )}
                         <div className="flex items-center gap-1 mt-1">
                           <User size={11} className="text-slate-500" />
                           <span className="text-slate-500 text-xs">{trip.user?.name}</span>

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTripStore } from '@/store/tripStore'
 import { useGPS } from '@/hooks/useGPS'
 import { haversineKm, calculateReimbursement } from '@/lib/distance'
+import { reverseGeocode } from '@/lib/geocoding'
 import { SyncBadge } from '@/components/layout/SyncBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [monthStats, setMonthStats] = useState({ km: 0, reimbursement: 0 })
   const [timer, setTimer] = useState('')
   const [stopping, setStopping] = useState(false)
+  const [startAddress, setStartAddress] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -98,6 +100,7 @@ export default function DashboardPage() {
       }
       startTrip(trip)
       toast.success('Tur startet')
+      reverseGeocode(pos.lat, pos.lng).then((addr) => setStartAddress(addr))
     } catch {
       toast.error('Kunne ikke hente GPS-posisjon. Sjekk tillatelser.')
     }
@@ -115,6 +118,10 @@ export default function DashboardPage() {
       const rate = 0.26
       const reimbursement = calculateReimbursement(km, rate, 0, 0, 0)
 
+      const [stopAddress] = await Promise.all([
+        reverseGeocode(pos.lat, pos.lng),
+      ])
+
       const supabase = createClient()
       const tripData = {
         id: activeTrip.id,
@@ -126,6 +133,8 @@ export default function DashboardPage() {
         start_lng: activeTrip.startLng,
         stop_lat: pos.lat,
         stop_lng: pos.lng,
+        start_address: startAddress,
+        stop_address: stopAddress,
         calculated_distance_km: km,
         adjusted_distance_km: km,
         category: activeTrip.category,
@@ -176,10 +185,17 @@ export default function DashboardPage() {
               <span className="text-green-400 font-semibold text-sm">Tur pågår</span>
               <span className="text-green-300 font-mono text-sm ml-auto">{timer}</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-300 text-sm mb-3">
+            <div className="flex items-center gap-2 text-slate-300 text-sm mb-1">
               <Clock size={14} />
               <span>Startet {new Date(activeTrip.startTime).toLocaleTimeString('nb-NO')}</span>
             </div>
+            {startAddress && (
+              <div className="flex items-start gap-2 text-slate-400 text-xs mb-3">
+                <MapPin size={12} className="mt-0.5 flex-shrink-0 text-green-500" />
+                <span>{startAddress}</span>
+              </div>
+            )}
+            {!startAddress && <div className="mb-3" />}
 
             {/* Category selector during trip */}
             <div className="flex flex-wrap gap-1 mb-4">

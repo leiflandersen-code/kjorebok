@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import type { Trip, Vehicle, Customer, Profile, TripCategory, TripStatus, TripAuditLog } from '@/types'
 import { calculateReimbursement } from '@/lib/distance'
-import { ChevronLeft, Clock, Save, Paperclip, History } from 'lucide-react'
+import { ChevronLeft, Clock, Save, Paperclip, History, MapPin } from 'lucide-react'
 import Link from 'next/link'
 
 const CATEGORIES: TripCategory[] = [
@@ -198,6 +198,32 @@ export default function TripDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Addresses */}
+      {(trip.start_address || trip.stop_address) && (
+        <Card className="bg-slate-900 border-slate-700 mb-4">
+          <CardContent className="p-4 space-y-2">
+            {trip.start_address && (
+              <div className="flex items-start gap-2">
+                <MapPin size={14} className="text-green-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-slate-400 text-xs">Fra</p>
+                  <p className="text-white text-sm">{trip.start_address}</p>
+                </div>
+              </div>
+            )}
+            {trip.stop_address && (
+              <div className="flex items-start gap-2">
+                <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-slate-400 text-xs">Til</p>
+                  <p className="text-white text-sm">{trip.stop_address}</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4">
         {/* Category */}
