@@ -13,15 +13,16 @@ import type { Trip, Vehicle, Customer, Profile, TripCategory, TripStatus, TripAu
 import { calculateReimbursement } from '@/lib/distance'
 import { ChevronLeft, Clock, Save, Paperclip, History, MapPin, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useLang } from '@/store/langStore'
 
-const CATEGORIES: TripCategory[] = [
-  'Næring', 'Privat', 'Kundevisning', 'Befaring', 'Innkjøp', 'Service/vedlikehold', 'Annet'
-]
 const STATUSES: TripStatus[] = ['Utkast', 'Klar til rapport', 'Eksportert']
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { t, lang } = useLang()
+  const locale = lang === 'no' ? 'nb-NO' : 'en-GB'
+  const CATEGORIES = Object.keys(t.categories) as TripCategory[]
   const [trip, setTrip] = useState<Trip | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -105,7 +106,7 @@ export default function TripDetailPage() {
     const { error } = await supabase.from('trips').update(updateData).eq('id', id)
 
     if (error) {
-      toast.error('Feil ved lagring')
+      toast.error(t.trip.saveError)
     } else {
       if (changes.length > 0) {
         await supabase.from('trip_audit_log').insert(
@@ -118,22 +119,22 @@ export default function TripDetailPage() {
           }))
         )
       }
-      toast.success('Lagret')
+      toast.success(t.trip.saveSuccess)
       load()
     }
     setSaving(false)
   }
 
   async function handleDelete() {
-    if (!confirm('Vil du slette denne turen? Dette kan ikke angres.')) return
+    if (!confirm(t.trip.deleteConfirm)) return
     setDeleting(true)
     const supabase = createClient()
     const { error } = await supabase.from('trips').delete().eq('id', id)
     if (error) {
-      toast.error('Feil ved sletting')
+      toast.error(t.trip.deleteError)
       setDeleting(false)
     } else {
-      toast.success('Tur slettet')
+      toast.success(t.trip.deleteSuccess)
       router.push('/trips')
     }
   }
@@ -151,7 +152,7 @@ export default function TripDetailPage() {
     const { error: uploadError } = await supabase.storage.from('receipts').upload(path, file)
 
     if (uploadError) {
-      toast.error('Feil ved opplasting')
+      toast.error(t.trip.saveError)
     } else {
       const { data: { publicUrl } } = supabase.storage.from('receipts').getPublicUrl(path)
       await supabase.from('trip_attachments').insert({
@@ -160,14 +161,14 @@ export default function TripDetailPage() {
         storage_path: path,
         attachment_type: 'receipt',
       })
-      toast.success('Kvittering lastet opp')
+      toast.success(t.trip.saveSuccess)
       load()
     }
     setUploading(false)
   }
 
   if (!trip || !form) {
-    return <div className="min-h-screen flex items-center justify-center"><p className="text-slate-400">Laster...</p></div>
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-slate-400">{t.trips.loading}</p></div>
   }
 
   const km = form.adjusted_distance_km ?? form.calculated_distance_km ?? 0
@@ -181,17 +182,17 @@ export default function TripDetailPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-white">
-            {new Date(trip.start_time).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {new Date(trip.start_time).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
           </h1>
           <p className="text-slate-400 text-xs">
-            Sist endret: {new Date(trip.updated_at).toLocaleString('nb-NO')}
+            {t.trip.lastEdited}: {new Date(trip.updated_at).toLocaleString(locale)}
           </p>
         </div>
         <button
           onClick={handleDelete}
           disabled={deleting}
           className="p-2 rounded-xl hover:bg-red-500/20 cursor-pointer transition-colors"
-          title="Slett tur"
+          title={t.trip.delete}
         >
           <Trash2 size={18} className="text-red-400" />
         </button>
@@ -202,7 +203,7 @@ export default function TripDetailPage() {
           className="bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
         >
           <Save size={16} className="mr-1" />
-          {saving ? 'Lagrer...' : 'Lagre'}
+          {saving ? t.trip.saving : t.trip.save}
         </Button>
       </div>
 
@@ -216,14 +217,14 @@ export default function TripDetailPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-green-400">€ {(form.calculated_reimbursement ?? 0).toFixed(2)}</p>
-              <p className="text-slate-400 text-xs">beregnet</p>
+              <p className="text-slate-400 text-xs">{t.dashboard.estimated}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-white pt-2">
-                {new Date(trip.start_time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}
-                {trip.stop_time && ` – ${new Date(trip.stop_time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`}
+                {new Date(trip.start_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                {trip.stop_time && ` – ${new Date(trip.stop_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`}
               </p>
-              <p className="text-slate-400 text-xs">tid</p>
+              <p className="text-slate-400 text-xs">{lang === 'no' ? 'tid' : 'time'}</p>
             </div>
           </div>
         </CardContent>
@@ -237,7 +238,7 @@ export default function TripDetailPage() {
               <div className="flex items-start gap-2">
                 <MapPin size={14} className="text-green-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-slate-400 text-xs">Fra</p>
+                  <p className="text-slate-400 text-xs">{t.trip.addressFrom}</p>
                   <p className="text-white text-sm">{trip.start_address}</p>
                 </div>
               </div>
@@ -246,7 +247,7 @@ export default function TripDetailPage() {
               <div className="flex items-start gap-2">
                 <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-slate-400 text-xs">Til</p>
+                  <p className="text-slate-400 text-xs">{t.trip.addressTo}</p>
                   <p className="text-white text-sm">{trip.stop_address}</p>
                 </div>
               </div>
@@ -258,7 +259,7 @@ export default function TripDetailPage() {
       <div className="space-y-4">
         {/* Category */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Kategori</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.category}</Label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
@@ -270,7 +271,7 @@ export default function TripDetailPage() {
                     : 'border-slate-600 text-slate-400 hover:border-slate-400'
                 }`}
               >
-                {cat}
+                {t.categories[cat as keyof typeof t.categories]}
               </button>
             ))}
           </div>
@@ -278,7 +279,7 @@ export default function TripDetailPage() {
 
         {/* Vehicle */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Kjøretøy</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.vehicle}</Label>
           <div className="flex gap-2 flex-wrap">
             {vehicles.map((v) => (
               <button
@@ -299,7 +300,7 @@ export default function TripDetailPage() {
         {/* Distance */}
         <div>
           <Label htmlFor="distance" className="text-slate-300 mb-2 block">
-            Kilometer (justert)
+            {t.trip.distanceAdjusted}
           </Label>
           <Input
             id="distance"
@@ -310,13 +311,13 @@ export default function TripDetailPage() {
             className="bg-slate-800 border-slate-600 text-white h-12 text-base"
           />
           {form.calculated_distance_km !== form.adjusted_distance_km && (
-            <p className="text-slate-500 text-xs mt-1">GPS-beregnet: {form.calculated_distance_km?.toFixed(2)} km</p>
+            <p className="text-slate-500 text-xs mt-1">{t.trip.distanceGps}: {form.calculated_distance_km?.toFixed(2)} km</p>
           )}
         </div>
 
         {/* Customer */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Kunde / prosjekt</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.customer}</Label>
           <div className="space-y-2">
             {customers.length > 0 && (
               <select
@@ -324,14 +325,14 @@ export default function TripDetailPage() {
                 onChange={(e) => updateForm('customer_id', e.target.value || null)}
                 className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-3 text-base cursor-pointer"
               >
-                <option value="">Velg fra kundeliste...</option>
+                <option value="">{t.trip.customerList}</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             )}
             <Input
-              placeholder="Fritekst kunde / prosjekt"
+              placeholder={t.trip.customerFreetext}
               value={form.customer_free_text ?? ''}
               onChange={(e) => updateForm('customer_free_text', e.target.value)}
               className="bg-slate-800 border-slate-600 text-white h-12 text-base"
@@ -341,19 +342,18 @@ export default function TripDetailPage() {
 
         {/* Purpose */}
         <div>
-          <Label htmlFor="purpose" className="text-slate-300 mb-2 block">Formål</Label>
+          <Label htmlFor="purpose" className="text-slate-300 mb-2 block">{t.trip.purpose}</Label>
           <Input
             id="purpose"
             value={form.purpose ?? ''}
             onChange={(e) => updateForm('purpose', e.target.value)}
-            placeholder="Hva var hensikten med turen?"
             className="bg-slate-800 border-slate-600 text-white h-12 text-base"
           />
         </div>
 
         {/* Notes */}
         <div>
-          <Label htmlFor="notes" className="text-slate-300 mb-2 block">Notater</Label>
+          <Label htmlFor="notes" className="text-slate-300 mb-2 block">{t.trip.notes}</Label>
           <Textarea
             id="notes"
             value={form.notes ?? ''}
@@ -366,12 +366,12 @@ export default function TripDetailPage() {
         {/* Costs */}
         <Card className="bg-slate-900 border-slate-700">
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm text-slate-300">Kostnader</CardTitle>
+            <CardTitle className="text-sm text-slate-300">{t.trip.costs}</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Parkering (€)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.parking}</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={form.parking_cost ?? 0}
@@ -380,7 +380,7 @@ export default function TripDetailPage() {
                 />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Bomvei (€)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.toll}</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={form.toll_cost ?? 0}
@@ -389,7 +389,7 @@ export default function TripDetailPage() {
                 />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Andre kostnader (€)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.otherCost}</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={form.other_cost ?? 0}
@@ -398,7 +398,7 @@ export default function TripDetailPage() {
                 />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Km-sats (€/km)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.mileageRate}</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={form.mileage_rate ?? 0.26}
@@ -408,7 +408,7 @@ export default function TripDetailPage() {
               </div>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-              <span className="text-slate-300 text-sm font-medium">Beregnet totalt</span>
+              <span className="text-slate-300 text-sm font-medium">{t.trip.totalEstimated}</span>
               <span className="text-green-400 font-bold">€ {(form.calculated_reimbursement ?? 0).toFixed(2)}</span>
             </div>
           </CardContent>
@@ -416,7 +416,7 @@ export default function TripDetailPage() {
 
         {/* Status */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Status</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.status}</Label>
           <div className="flex gap-2">
             {STATUSES.map((s) => (
               <button
@@ -428,7 +428,7 @@ export default function TripDetailPage() {
                     : 'border-slate-600 text-slate-400 hover:border-slate-400'
                 }`}
               >
-                {s}
+                {t.statuses[s as keyof typeof t.statuses]}
               </button>
             ))}
           </div>
@@ -438,12 +438,12 @@ export default function TripDetailPage() {
         <div>
           <Label className="text-slate-300 mb-2 block flex items-center gap-2">
             <Paperclip size={14} />
-            Kvitteringer / bilder
+            {t.trip.attachments}
           </Label>
           <label className="block cursor-pointer">
             <div className="border-2 border-dashed border-slate-600 rounded-xl p-4 text-center hover:border-slate-400 transition-colors">
               <p className="text-slate-400 text-sm">
-                {uploading ? 'Laster opp...' : 'Trykk for å laste opp bilde/kvittering'}
+                {uploading ? t.trip.uploading : t.trip.uploadHint}
               </p>
             </div>
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileUpload} />
@@ -459,7 +459,7 @@ export default function TripDetailPage() {
                   className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg text-sm text-slate-300 hover:text-white cursor-pointer"
                 >
                   <Paperclip size={14} />
-                  {att.attachment_type} — {new Date(att.created_at).toLocaleDateString('nb-NO')}
+                  {att.attachment_type} — {new Date(att.created_at).toLocaleDateString(locale)}
                 </a>
               ))}
             </div>
@@ -471,14 +471,14 @@ export default function TripDetailPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <History size={14} className="text-slate-400" />
-              <Label className="text-slate-300">Endringslogg</Label>
+              <Label className="text-slate-300">{t.trip.auditLog}</Label>
             </div>
             <div className="space-y-2">
               {auditLog.map((log) => (
                 <div key={log.id} className="p-3 bg-slate-900 border border-slate-700 rounded-xl text-xs">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-slate-300 font-medium">{(log.editor as any)?.name ?? 'Ukjent'}</span>
-                    <span className="text-slate-500">{new Date(log.edited_at).toLocaleString('nb-NO')}</span>
+                    <span className="text-slate-300 font-medium">{(log.editor as any)?.name ?? t.trip.unknown}</span>
+                    <span className="text-slate-500">{new Date(log.edited_at).toLocaleString(locale)}</span>
                   </div>
                   <p className="text-slate-400">
                     <span className="text-slate-300">{log.field_changed}</span>:{' '}

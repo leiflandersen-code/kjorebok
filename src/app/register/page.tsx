@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Car } from 'lucide-react'
+import { useLang } from '@/store/langStore'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { t } = useLang()
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -32,7 +34,7 @@ export default function RegisterPage() {
     if (error) {
       toast.error(error.message)
     } else {
-      toast.success('Konto opprettet! Logger inn...')
+      toast.success(t.auth.registerSuccess)
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
       if (!loginError) {
         router.push('/dashboard')
@@ -54,23 +56,23 @@ export default function RegisterPage() {
 
         <Card className="bg-slate-900 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-lg text-white">Opprett konto</CardTitle>
+            <CardTitle className="text-lg text-white">{t.auth.registerTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-300">Navn</Label>
+                <Label htmlFor="name" className="text-slate-300">{t.auth.name}</Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Leif eller Kamila"
+                  placeholder={t.auth.namePlaceholder}
                   required
                   className="bg-slate-800 border-slate-600 text-white h-12 text-base"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300">E-post</Label>
+                <Label htmlFor="email" className="text-slate-300">{t.auth.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -81,7 +83,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-300">Passord</Label>
+                <Label htmlFor="password" className="text-slate-300">{t.auth.password}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -97,13 +99,13 @@ export default function RegisterPage() {
                 disabled={loading}
                 className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold text-base cursor-pointer"
               >
-                {loading ? 'Oppretter...' : 'Opprett konto'}
+                {loading ? t.auth.registering : t.auth.registerBtn}
               </Button>
             </form>
             <p className="text-center text-slate-400 text-sm mt-4">
-              Har du konto?{' '}
+              {t.auth.hasAccount}{' '}
               <Link href="/login" className="text-green-400 hover:text-green-300 cursor-pointer">
-                Logg inn
+                {t.auth.signIn}
               </Link>
             </p>
           </CardContent>

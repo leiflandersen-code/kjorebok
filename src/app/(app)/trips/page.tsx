@@ -2,25 +2,26 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useLang } from '@/store/langStore'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import type { Trip, Vehicle, Profile } from '@/types'
-import { ChevronRight, MapPin, User } from 'lucide-react'
-
-const statusColor: Record<string, string> = {
-  'Utkast': 'bg-slate-700 text-slate-300',
-  'Klar til rapport': 'bg-blue-500/20 text-blue-400',
-  'Eksportert': 'bg-green-500/20 text-green-400',
-}
+import { MapPin, User, ChevronRight } from 'lucide-react'
 
 export default function TripsPage() {
+  const { t, lang } = useLang()
   const [trips, setTrips] = useState<(Trip & { vehicle?: Vehicle; user?: Profile })[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadTrips()
-  }, [])
+  const statusColor: Record<string, string> = {
+    'Utkast': 'bg-slate-700 text-slate-300',
+    'Klar til rapport': 'bg-blue-500/20 text-blue-400',
+    'Eksportert': 'bg-green-500/20 text-green-400',
+  }
+
+  const locale = lang === 'no' ? 'nb-NO' : 'en-GB'
+
+  useEffect(() => { loadTrips() }, [])
 
   async function loadTrips() {
     const supabase = createClient()
@@ -29,7 +30,6 @@ export default function TripsPage() {
       .select('*, vehicle:vehicles(*), user:profiles(*)')
       .order('start_time', { ascending: false })
       .limit(100)
-
     setTrips(data ?? [])
     setLoading(false)
   }
@@ -37,7 +37,7 @@ export default function TripsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-400">Laster turer...</p>
+        <p className="text-slate-400">{t.trips.loading}</p>
       </div>
     )
   }
@@ -45,26 +45,25 @@ export default function TripsPage() {
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-6 pt-2">
-        <h1 className="text-xl font-bold text-white">Alle turer</h1>
-        <Link
-          href="/trip/new"
-          className="text-sm text-green-400 hover:text-green-300 cursor-pointer font-medium"
-        >
-          + Ny tur
+        <h1 className="text-xl font-bold text-white">{t.trips.title}</h1>
+        <Link href="/trip/new" className="text-sm text-green-400 hover:text-green-300 cursor-pointer font-medium">
+          {t.trips.newTrip}
         </Link>
       </div>
 
       {trips.length === 0 ? (
         <div className="text-center py-16">
           <MapPin size={40} className="text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-400">Ingen turer ennå</p>
-          <p className="text-slate-500 text-sm mt-1">Trykk &quot;Start tur&quot; på dashbordet</p>
+          <p className="text-slate-400">{t.trips.noTrips}</p>
+          <p className="text-slate-500 text-sm mt-1">{t.trips.noTripsHint}</p>
         </div>
       ) : (
         <div className="space-y-3">
           {trips.map((trip) => {
             const km = trip.adjusted_distance_km ?? trip.calculated_distance_km ?? 0
             const date = new Date(trip.start_time)
+            const statusKey = trip.status as keyof typeof t.statuses
+            const catKey = trip.category as keyof typeof t.categories
             return (
               <Link key={trip.id} href={`/trip/${trip.id}`} className="block cursor-pointer">
                 <Card className="bg-slate-900 border-slate-700 hover:border-slate-500 transition-colors">
@@ -73,17 +72,15 @@ export default function TripsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-white font-medium text-sm">
-                            {date.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            {date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
                           </span>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[trip.status]}`}>
-                            {trip.status}
+                            {t.statuses[statusKey] ?? trip.status}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-slate-400">
-                          <span>{trip.category}</span>
-                          {trip.vehicle && (
-                            <span className="truncate">{trip.vehicle.name}</span>
-                          )}
+                          <span>{t.categories[catKey] ?? trip.category}</span>
+                          {trip.vehicle && <span className="truncate">{trip.vehicle.name}</span>}
                         </div>
                         {(trip.customer_free_text || trip.purpose) && (
                           <p className="text-slate-500 text-xs mt-1 truncate">

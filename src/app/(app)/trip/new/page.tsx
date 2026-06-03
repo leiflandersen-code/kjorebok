@@ -14,13 +14,12 @@ import { calculateReimbursement } from '@/lib/distance'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { v4 as uuidv4 } from 'uuid'
-
-const CATEGORIES: TripCategory[] = [
-  'Næring', 'Privat', 'Kundevisning', 'Befaring', 'Innkjøp', 'Service/vedlikehold', 'Annet'
-]
+import { useLang } from '@/store/langStore'
 
 export default function NewTripPage() {
   const router = useRouter()
+  const { t } = useLang()
+  const CATEGORIES = Object.keys(t.categories) as TripCategory[]
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [saving, setSaving] = useState(false)
@@ -60,7 +59,7 @@ export default function NewTripPage() {
 
   async function handleSave() {
     if (!form.distanceKm || parseFloat(form.distanceKm) <= 0) {
-      toast.error('Legg inn antall kilometer')
+      toast.error(t.newTrip.distanceRequired)
       return
     }
     setSaving(true)
@@ -101,9 +100,9 @@ export default function NewTripPage() {
     }).select().single()
 
     if (error) {
-      toast.error('Feil ved lagring')
+      toast.error(t.newTrip.saveError)
     } else {
-      toast.success('Tur lagret')
+      toast.success(t.newTrip.saveSuccess)
       router.push(`/trip/${data.id}`)
     }
     setSaving(false)
@@ -119,14 +118,14 @@ export default function NewTripPage() {
         <Link href="/trips" className="p-2 rounded-xl hover:bg-slate-800 cursor-pointer transition-colors">
           <ChevronLeft size={20} className="text-slate-300" />
         </Link>
-        <h1 className="text-lg font-bold text-white flex-1">Ny tur (manuell)</h1>
+        <h1 className="text-lg font-bold text-white flex-1">{t.newTrip.title}</h1>
         <Button
           onClick={handleSave}
           disabled={saving}
           size="sm"
           className="bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
         >
-          {saving ? 'Lagrer...' : 'Lagre'}
+          {saving ? t.newTrip.saving : t.newTrip.save}
         </Button>
       </div>
 
@@ -134,7 +133,7 @@ export default function NewTripPage() {
         {/* Date & time */}
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-1">
-            <Label className="text-slate-300 mb-2 block text-xs">Dato</Label>
+            <Label className="text-slate-300 mb-2 block text-xs">{t.newTrip.date}</Label>
             <input
               type="date"
               value={form.date}
@@ -143,7 +142,7 @@ export default function NewTripPage() {
             />
           </div>
           <div>
-            <Label className="text-slate-300 mb-2 block text-xs">Fra</Label>
+            <Label className="text-slate-300 mb-2 block text-xs">{t.newTrip.from}</Label>
             <input
               type="time"
               value={form.startTime}
@@ -152,7 +151,7 @@ export default function NewTripPage() {
             />
           </div>
           <div>
-            <Label className="text-slate-300 mb-2 block text-xs">Til</Label>
+            <Label className="text-slate-300 mb-2 block text-xs">{t.newTrip.to}</Label>
             <input
               type="time"
               value={form.stopTime}
@@ -164,7 +163,7 @@ export default function NewTripPage() {
 
         {/* Category */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Kategori</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.category}</Label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
@@ -176,7 +175,7 @@ export default function NewTripPage() {
                     : 'border-slate-600 text-slate-400 hover:border-slate-400'
                 }`}
               >
-                {cat}
+                {t.categories[cat as keyof typeof t.categories]}
               </button>
             ))}
           </div>
@@ -185,7 +184,7 @@ export default function NewTripPage() {
         {/* Vehicle */}
         {vehicles.length > 0 && (
           <div>
-            <Label className="text-slate-300 mb-2 block">Kjøretøy</Label>
+            <Label className="text-slate-300 mb-2 block">{t.trip.vehicle}</Label>
             <div className="flex gap-2">
               {vehicles.map((v) => (
                 <button
@@ -206,7 +205,7 @@ export default function NewTripPage() {
 
         {/* Distance */}
         <div>
-          <Label htmlFor="km" className="text-slate-300 mb-2 block">Kilometer *</Label>
+          <Label htmlFor="km" className="text-slate-300 mb-2 block">{t.trip.distanceAdjusted} *</Label>
           <Input
             id="km"
             type="number"
@@ -221,19 +220,19 @@ export default function NewTripPage() {
 
         {/* Customer */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Kunde / prosjekt</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.customer}</Label>
           {customers.length > 0 && (
             <select
               value={form.customerId}
               onChange={(e) => set('customerId', e.target.value)}
               className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-3 text-base cursor-pointer mb-2"
             >
-              <option value="">Velg fra kundeliste...</option>
+              <option value="">{t.trip.customerList}</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
           <Input
-            placeholder="Fritekst kunde / prosjekt"
+            placeholder={t.trip.customerFreetext}
             value={form.customerFreeText}
             onChange={(e) => set('customerFreeText', e.target.value)}
             className="bg-slate-800 border-slate-600 text-white h-12 text-base"
@@ -242,7 +241,7 @@ export default function NewTripPage() {
 
         {/* Purpose */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Formål</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.purpose}</Label>
           <Input
             value={form.purpose}
             onChange={(e) => set('purpose', e.target.value)}
@@ -252,7 +251,7 @@ export default function NewTripPage() {
 
         {/* Notes */}
         <div>
-          <Label className="text-slate-300 mb-2 block">Notater</Label>
+          <Label className="text-slate-300 mb-2 block">{t.trip.notes}</Label>
           <Textarea
             value={form.notes}
             onChange={(e) => set('notes', e.target.value)}
@@ -264,29 +263,29 @@ export default function NewTripPage() {
         {/* Costs & summary */}
         <Card className="bg-slate-900 border-slate-700">
           <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm text-slate-300">Kostnader</CardTitle>
+            <CardTitle className="text-sm text-slate-300">{t.trip.costs}</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Parkering (€)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.parking}</Label>
                 <Input type="number" step="0.01" min="0" value={form.parkingCost} onChange={(e) => set('parkingCost', e.target.value)} className="bg-slate-800 border-slate-600 text-white h-10 text-sm" />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Bomvei (€)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.toll}</Label>
                 <Input type="number" step="0.01" min="0" value={form.tollCost} onChange={(e) => set('tollCost', e.target.value)} className="bg-slate-800 border-slate-600 text-white h-10 text-sm" />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Andre kostnader (€)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.otherCost}</Label>
                 <Input type="number" step="0.01" min="0" value={form.otherCost} onChange={(e) => set('otherCost', e.target.value)} className="bg-slate-800 border-slate-600 text-white h-10 text-sm" />
               </div>
               <div>
-                <Label className="text-slate-400 text-xs mb-1 block">Km-sats (€/km)</Label>
+                <Label className="text-slate-400 text-xs mb-1 block">{t.trip.mileageRate}</Label>
                 <Input type="number" step="0.01" min="0" value={form.mileageRate} onChange={(e) => set('mileageRate', e.target.value)} className="bg-slate-800 border-slate-600 text-white h-10 text-sm" />
               </div>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-              <span className="text-slate-300 text-sm font-medium">Beregnet totalt</span>
+              <span className="text-slate-300 text-sm font-medium">{t.trip.totalEstimated}</span>
               <span className="text-green-400 font-bold">€ {reimbursement.toFixed(2)}</span>
             </div>
           </CardContent>

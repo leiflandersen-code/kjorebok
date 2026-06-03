@@ -10,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Car } from 'lucide-react'
+import { useLang } from '@/store/langStore'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { t } = useLang()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -25,7 +27,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      toast.error('Feil e-post eller passord')
+      toast.error(t.auth.loginError)
     } else {
       router.push('/dashboard')
       router.refresh()
@@ -46,12 +48,12 @@ export default function LoginPage() {
 
         <Card className="bg-slate-900 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-lg text-white">Logg inn</CardTitle>
+            <CardTitle className="text-lg text-white">{t.auth.loginTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300">E-post</Label>
+                <Label htmlFor="email" className="text-slate-300">{t.auth.email}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -64,7 +66,7 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-300">Passord</Label>
+                <Label htmlFor="password" className="text-slate-300">{t.auth.password}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -81,13 +83,13 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold text-base cursor-pointer"
               >
-                {loading ? 'Logger inn...' : 'Logg inn'}
+                {loading ? t.auth.loggingIn : t.auth.loginBtn}
               </Button>
             </form>
             <p className="text-center text-slate-400 text-sm mt-4">
-              Ingen konto?{' '}
+              {t.auth.noAccount}{' '}
               <Link href="/register" className="text-green-400 hover:text-green-300 cursor-pointer">
-                Registrer deg
+                {t.auth.signUp}
               </Link>
             </p>
           </CardContent>

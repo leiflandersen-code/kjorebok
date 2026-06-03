@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useLang } from '@/store/langStore'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,7 @@ import type { Customer } from '@/types'
 import { Plus, Pencil, Users } from 'lucide-react'
 
 export default function CustomersPage() {
+  const { t } = useLang()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
@@ -43,18 +45,16 @@ export default function CustomersPage() {
     if (!form.name.trim()) return
     setSaving(true)
     const supabase = createClient()
-
     if (editing) {
       const { error } = await supabase.from('customers').update(form).eq('id', editing.id)
-      if (error) toast.error('Feil ved lagring')
-      else toast.success('Kunde oppdatert')
+      if (error) toast.error(t.customers.saveError)
+      else toast.success(t.customers.saveSuccess)
     } else {
       const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase.from('customers').insert({ ...form, created_by: user?.id })
-      if (error) toast.error('Feil ved lagring')
-      else toast.success('Kunde lagt til')
+      if (error) toast.error(t.customers.saveError)
+      else toast.success(t.customers.addSuccess)
     }
-
     setOpen(false)
     load()
     setSaving(false)
@@ -63,21 +63,17 @@ export default function CustomersPage() {
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-6 pt-2">
-        <h1 className="text-xl font-bold text-white">Kunder</h1>
-        <Button
-          onClick={openNew}
-          size="sm"
-          className="bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
-        >
+        <h1 className="text-xl font-bold text-white">{t.customers.title}</h1>
+        <Button onClick={openNew} size="sm" className="bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer">
           <Plus size={16} className="mr-1" />
-          Ny kunde
+          {t.customers.newCustomer}
         </Button>
       </div>
 
       {customers.length === 0 ? (
         <div className="text-center py-16">
           <Users size={40} className="text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-400">Ingen kunder ennå</p>
+          <p className="text-slate-400">{t.customers.noCustomers}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -89,10 +85,7 @@ export default function CustomersPage() {
                   {c.contact && <p className="text-slate-400 text-sm">{c.contact}</p>}
                   {c.notes && <p className="text-slate-500 text-xs mt-1">{c.notes}</p>}
                 </div>
-                <button
-                  onClick={() => openEdit(c)}
-                  className="p-2 rounded-xl hover:bg-slate-800 cursor-pointer transition-colors"
-                >
+                <button onClick={() => openEdit(c)} className="p-2 rounded-xl hover:bg-slate-800 cursor-pointer transition-colors">
                   <Pencil size={16} className="text-slate-400" />
                 </button>
               </CardContent>
@@ -104,41 +97,23 @@ export default function CustomersPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Rediger kunde' : 'Ny kunde'}</DialogTitle>
+            <DialogTitle>{editing ? t.customers.editTitle : t.customers.newTitle}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-slate-300 mb-2 block">Navn *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="bg-slate-800 border-slate-600 text-white h-12 text-base"
-                autoFocus
-              />
+              <Label className="text-slate-300 mb-2 block">{t.customers.name} *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-slate-800 border-slate-600 text-white h-12 text-base" autoFocus />
             </div>
             <div>
-              <Label className="text-slate-300 mb-2 block">Kontakt / e-post</Label>
-              <Input
-                value={form.contact}
-                onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                className="bg-slate-800 border-slate-600 text-white h-12 text-base"
-              />
+              <Label className="text-slate-300 mb-2 block">{t.customers.contact}</Label>
+              <Input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} className="bg-slate-800 border-slate-600 text-white h-12 text-base" />
             </div>
             <div>
-              <Label className="text-slate-300 mb-2 block">Notater</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="bg-slate-800 border-slate-600 text-white resize-none"
-                rows={3}
-              />
+              <Label className="text-slate-300 mb-2 block">{t.customers.notes}</Label>
+              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="bg-slate-800 border-slate-600 text-white resize-none" rows={3} />
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={saving || !form.name.trim()}
-              className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
-            >
-              {saving ? 'Lagrer...' : 'Lagre'}
+            <Button onClick={handleSave} disabled={saving || !form.name.trim()} className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer">
+              {saving ? t.customers.saving : t.customers.save}
             </Button>
           </div>
         </DialogContent>
