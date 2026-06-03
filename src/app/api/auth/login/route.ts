@@ -4,7 +4,14 @@ import { limits } from '@/lib/ratelimit'
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  const { remaining } = limits.login(ip)
+  const { allowed, resetIn, remaining } = limits.login(ip)
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'too_many_requests', retryAfter: Math.ceil(resetIn / 1000) },
+      { status: 429 }
+    )
+  }
 
   const { email, password } = await req.json()
   if (!email || !password) {
