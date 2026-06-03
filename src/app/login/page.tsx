@@ -23,12 +23,15 @@ export default function LoginPage() {
   const { t, lang } = useLang()
   const no = lang === 'no'
 
-  // Detect Supabase password-reset token in URL hash and forward to /reset-password
+  // Detect Supabase password-reset token (hash or query param) and forward to /reset-password
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hash = window.location.hash
+    const search = window.location.search
     if (hash.includes('access_token')) {
       router.replace('/reset-password' + hash)
+    } else if (search.includes('code=')) {
+      router.replace('/reset-password' + search)
     }
   }, [])
 

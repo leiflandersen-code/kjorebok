@@ -22,16 +22,24 @@ export default function ResetPasswordPage() {
   const { lang } = useLang()
   const no = lang === 'no'
 
-  // Exchange the token from URL hash for a session
+  // Exchange the token from URL hash or code param for a session
   useEffect(() => {
     const hash = window.location.hash
-    if (!hash.includes('access_token')) { setReady(true); return }
-    const params = new URLSearchParams(hash.replace('#', ''))
-    const access_token = params.get('access_token')
-    const refresh_token = params.get('refresh_token') ?? ''
-    if (access_token) {
-      const supabase = createClient()
-      supabase.auth.setSession({ access_token, refresh_token }).then(() => setReady(true))
+    const search = window.location.search
+    const supabase = createClient()
+
+    if (hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.replace('#', ''))
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token') ?? ''
+      if (access_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(() => setReady(true))
+      } else {
+        setReady(true)
+      }
+    } else if (search.includes('code=')) {
+      // PKCE flow — exchange code for session
+      supabase.auth.exchangeCodeForSession(new URLSearchParams(search).get('code')!).then(() => setReady(true))
     } else {
       setReady(true)
     }
