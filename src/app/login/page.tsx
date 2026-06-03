@@ -27,7 +27,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hash = window.location.hash
-    if (hash.includes('access_token') && hash.includes('type=recovery')) {
+    if (hash.includes('access_token')) {
       router.replace('/reset-password' + hash)
     }
   }, [])
