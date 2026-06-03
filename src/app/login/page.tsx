@@ -36,20 +36,12 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
 
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (res.status === 429) {
-      const data = await res.json()
-      toast.error(`For mange forsøk. Vent ${Math.ceil(data.retryAfter / 60)} min.`)
-    } else if (!res.ok) {
+    if (error) {
       toast.error(t.auth.loginError)
     } else {
-      const supabase = createClient()
-      await supabase.auth.signInWithPassword({ email, password })
       router.push('/dashboard')
       router.refresh()
     }
