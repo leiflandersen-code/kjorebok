@@ -91,11 +91,20 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Remove 300ms tap delay on iOS */
+    touch-action: manipulation;
   }
   body {
     @apply bg-background text-foreground;
+    /* Prevent iOS text size adjustment */
+    -webkit-text-size-adjust: 100%;
   }
   html {
     @apply font-sans;
+  }
+  /* Faster tap response for all interactive elements */
+  a, button, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }
