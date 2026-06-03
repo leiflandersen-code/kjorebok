@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import type { Profile, Vehicle, TripCategory } from '@/types'
-import { LogOut, Car, User, Plus, Trash2, Tag, Globe, Crown, AlertTriangle } from 'lucide-react'
+import { LogOut, Car, User, Plus, Trash2, Tag, Globe, Crown, AlertTriangle, MapPin, ExternalLink } from 'lucide-react'
 import type { Lang } from '@/lib/translations'
 import { useSubscription } from '@/hooks/useSubscription'
+import { COUNTRY_RATES, getCountryRate } from '@/lib/countries'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -28,6 +29,9 @@ export default function SettingsPage() {
   const [defaultCategory, setDefaultCategory] = useState<TripCategory>('Næring')
   const [newVehicle, setNewVehicle] = useState({ name: '', registration: '' })
   const [saving, setSaving] = useState(false)
+  const [selectedCountry, setSelectedCountry] = useState('ES')
+  const [customRate, setCustomRate] = useState('')
+  const [savingRate, setSavingRate] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -44,6 +48,8 @@ export default function SettingsPage() {
       setProfileName(prof.name)
       setDefaultVehicle(prof.default_vehicle_id ?? '')
       setDefaultCategory((prof.default_category as TripCategory) ?? 'Næring')
+      setSelectedCountry(prof.country_code ?? 'ES')
+      setCustomRate(String(prof.mileage_rate ?? ''))
     }
     setVehicles(veh ?? [])
   }
@@ -80,6 +86,32 @@ export default function SettingsPage() {
     await supabase.from('vehicles').delete().eq('id', id)
     toast.success(t.settings.vehicleDeleted)
     load()
+  }
+
+  async function saveCountryRate() {
+    if (!profile) return
+    setSavingRate(true)
+    const country = getCountryRate(selectedCountry)
+    const rate = customRate.trim() ? parseFloat(customRate.replace(',', '.')) : country.rate
+    if (isNaN(rate) || rate <= 0) {
+      toast.error(lang === 'no' ? 'Ugyldig sats' : 'Invalid rate')
+      setSavingRate(false)
+      return
+    }
+    const supabase = createClient()
+    const { error } = await supabase.from('profiles').update({
+      country_code: country.code,
+      mileage_rate: rate,
+      currency_code: country.currency,
+      currency_symbol: country.symbol,
+      country_selected_at: new Date().toISOString(),
+    }).eq('id', profile.id)
+    if (error) toast.error(lang === 'no' ? 'Feil ved lagring' : 'Error saving')
+    else {
+      toast.success(lang === 'no' ? 'Km-sats oppdatert!' : 'Mileage rate updated!')
+      load()
+    }
+    setSavingRate(false)
   }
 
   async function handleLogout() {
@@ -146,6 +178,76 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Mileage rate */}
+      <Card className="bg-slate-900 border-slate-700 mb-4">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm text-slate-300 flex items-center gap-2">
+            <MapPin size={14} className="text-green-400" />
+            {lang === 'no' ? 'Land og km-sats' : 'Country & mileage rate'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 space-y-3">
+          <div>
+            <Label className="text-slate-400 text-xs mb-1 block">
+              {lang === 'no' ? 'Land' : 'Country'}
+            </Label>
+            <select
+              value={selectedCountry}
+              onChange={(e) => {
+                setSelectedCountry(e.target.value)
+                setCustomRate('') // reset override when country changes
+              }}
+              className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-3 text-base cursor-pointer"
+            >
+              {COUNTRY_RATES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} {lang === 'no' ? c.name.no : c.name.en} — {c.rate.toFixed(2)} {c.rateLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-slate-400 text-xs mb-1 block">
+              {lang === 'no' ? 'Sats per km (valgfri override)' : 'Rate per km (optional override)'}
+            </Label>
+            <Input
+              value={customRate}
+              onChange={(e) => setCustomRate(e.target.value)}
+              placeholder={`${getCountryRate(selectedCountry).rate.toFixed(2)} ${getCountryRate(selectedCountry).rateLabel}`}
+              className="bg-slate-800 border-slate-600 text-white h-12 text-base"
+              inputMode="decimal"
+            />
+          </div>
+          <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+            <AlertTriangle size={13} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-300/80 text-xs leading-relaxed">
+              {lang === 'no'
+                ? `Offisiell sats: ${getCountryRate(selectedCountry).rate} ${getCountryRate(selectedCountry).rateLabel} (${getCountryRate(selectedCountry).source}, ${getCountryRate(selectedCountry).year}). Kontroller alltid med regnskapsfører.`
+                : `Official rate: ${getCountryRate(selectedCountry).rate} ${getCountryRate(selectedCountry).rateLabel} (${getCountryRate(selectedCountry).source}, ${getCountryRate(selectedCountry).year}). Always verify with your accountant.`}
+              {getCountryRate(selectedCountry).sourceUrl && (
+                <a
+                  href={getCountryRate(selectedCountry).sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-green-400 ml-1 hover:underline"
+                >
+                  {lang === 'no' ? 'Kilde' : 'Source'} <ExternalLink size={10} />
+                </a>
+              )}
+            </p>
+          </div>
+          <Button
+            onClick={saveCountryRate}
+            disabled={savingRate}
+            className="w-full h-12 bg-green-500 hover:bg-green-400 text-slate-900 font-semibold cursor-pointer"
+          >
+            {savingRate
+              ? (lang === 'no' ? 'Lagrer...' : 'Saving...')
+              : (lang === 'no' ? 'Lagre km-sats' : 'Save mileage rate')}
+          </Button>
         </CardContent>
       </Card>
 

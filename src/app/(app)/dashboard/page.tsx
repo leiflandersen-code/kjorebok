@@ -17,6 +17,7 @@ import type { Profile, Vehicle, TripCategory } from '@/types'
 import { MapPin, Clock, TrendingUp, Euro, AlertTriangle, Navigation } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { initRevenueCat } from '@/lib/revenuecat'
+import { CountryOnboarding } from '@/components/layout/CountryOnboarding'
 
 function formatDuration(start: string): string {
   const diff = Date.now() - new Date(start).getTime()
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [timer, setTimer] = useState('')
   const [stopping, setStopping] = useState(false)
   const [startAddress, setStartAddress] = useState<string | null>(null)
+  const [showCountryOnboarding, setShowCountryOnboarding] = useState(false)
 
   useGPSTracking()
 
@@ -62,7 +64,8 @@ export default function DashboardPage() {
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     if (prof) {
       setProfile(prof)
-      initRevenueCat(user.id) // Start RevenueCat med bruker-ID
+      initRevenueCat(user.id)
+      if (!prof.country_selected_at) setShowCountryOnboarding(true)
     }
 
     const { data: veh } = await supabase.from('vehicles').select('*')
@@ -116,7 +119,7 @@ export default function DashboardPage() {
       const stopLat = lastLat
       const stopLng = lastLng
       const km = Math.round(accumulatedKm * 100) / 100
-      const rate = 0.26
+      const rate = profile.mileage_rate ?? 0.26
       const reimbursement = calculateReimbursement(km, rate, 0, 0, 0)
       const stopAddress = stopLat && stopLng ? await reverseGeocode(stopLat, stopLng) : null
 
@@ -155,10 +158,20 @@ export default function DashboardPage() {
     }
   }
 
-  const liveReimbursement = calculateReimbursement(accumulatedKm, 0.26, 0, 0, 0)
+  const liveReimbursement = calculateReimbursement(accumulatedKm, profile?.mileage_rate ?? 0.26, 0, 0, 0)
+  const currencySymbol = profile?.currency_symbol ?? '€'
 
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
+      {showCountryOnboarding && profile && (
+        <CountryOnboarding
+          userId={profile.id}
+          onDone={() => {
+            setShowCountryOnboarding(false)
+            loadData()
+          }}
+        />
+      )}
       <div className="flex items-center justify-between mb-6 pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">
@@ -185,7 +198,7 @@ export default function DashboardPage() {
                 <span className="text-slate-400 text-sm ml-1">km</span>
               </div>
               <div className="pb-1">
-                <span className="text-green-400 font-semibold">€ {liveReimbursement.toFixed(2)}</span>
+                <span className="text-green-400 font-semibold">{currencySymbol} {liveReimbursement.toFixed(2)}</span>
               </div>
               <div className="ml-auto pb-1">
                 <Navigation size={16} className="text-green-400 animate-pulse" />
@@ -277,7 +290,7 @@ export default function DashboardPage() {
               <Euro size={16} className="text-green-400" />
               <span className="text-slate-400 text-xs">{t.dashboard.estimatedRate}</span>
             </div>
-            <p className="text-2xl font-bold text-white">€ {monthStats.reimbursement.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-white">{currencySymbol} {monthStats.reimbursement.toFixed(2)}</p>
             <p className="text-slate-400 text-sm">{t.dashboard.estimated}</p>
           </CardContent>
         </Card>
