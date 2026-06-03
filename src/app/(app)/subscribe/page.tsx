@@ -7,8 +7,10 @@ import { useLang } from '@/store/langStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { Capacitor } from '@capacitor/core'
+import { purchaseMonthly, restorePurchases } from '@/lib/revenuecat'
 import {
-  Car, Check, Tag, Zap, FileText, Wifi, Crown, ArrowRight, Gift
+  Car, Check, Tag, Zap, FileText, Wifi, Crown, ArrowRight, Gift, RotateCcw
 } from 'lucide-react'
 
 const FEATURES = [
@@ -27,6 +29,40 @@ export default function SubscribePage() {
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoSuccess, setPromoSuccess] = useState(false)
+  const [purchasing, setPurchasing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const isNative = Capacitor.isNativePlatform()
+
+  async function handlePurchase() {
+    if (!isNative) {
+      toast.info(no ? 'Abonnement krever iOS-appen' : 'Subscription requires the iOS app')
+      return
+    }
+    setPurchasing(true)
+    const result = await purchaseMonthly()
+    if (result === 'success') {
+      toast.success(no ? 'Abonnement aktivert!' : 'Subscription activated!')
+      router.push('/dashboard')
+    } else if (result === 'cancelled') {
+      toast.info(no ? 'Avbrutt' : 'Cancelled')
+    } else {
+      toast.error(no ? 'Noe gikk galt. Prøv igjen.' : 'Something went wrong. Please try again.')
+    }
+    setPurchasing(false)
+  }
+
+  async function handleRestore() {
+    if (!isNative) return
+    setRestoring(true)
+    const ok = await restorePurchases()
+    if (ok) {
+      toast.success(no ? 'Kjøp gjenopprettet!' : 'Purchase restored!')
+      router.push('/dashboard')
+    } else {
+      toast.error(no ? 'Ingen aktive kjøp funnet' : 'No active purchases found')
+    }
+    setRestoring(false)
+  }
 
   const errorMessages: Record<string, string> = {
     invalid_code:  no ? 'Ugyldig kode'              : 'Invalid code',
@@ -101,19 +137,40 @@ export default function SubscribePage() {
             ))}
           </ul>
 
-          {/* Apple Subscribe button (wired via RevenueCat later) */}
+          {/* Apple Subscribe button */}
           <Button
             className="w-full h-14 bg-green-500 hover:bg-green-400 text-slate-900 font-bold text-base rounded-xl cursor-pointer flex items-center justify-center gap-2 transition-all active:scale-95"
-            onClick={() => toast.info(no ? 'Abonnement via App Store kommer snart' : 'App Store subscription coming soon')}
+            onClick={handlePurchase}
+            disabled={purchasing}
           >
-            <Crown size={18} />
-            {no ? 'Start gratis prøveperiode' : 'Start free trial'}
-            <ArrowRight size={16} className="ml-1" />
+            {purchasing ? (
+              <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Crown size={18} />
+            )}
+            {purchasing
+              ? (no ? 'Behandler...' : 'Processing...')
+              : (no ? 'Start gratis prøveperiode' : 'Start free trial')}
+            {!purchasing && <ArrowRight size={16} className="ml-1" />}
           </Button>
-          <p className="text-slate-600 text-xs text-center mt-3">
+
+          {isNative && (
+            <button
+              onClick={handleRestore}
+              disabled={restoring}
+              className="w-full text-slate-500 text-xs text-center mt-2 py-2 cursor-pointer hover:text-slate-300 transition-colors flex items-center justify-center gap-1"
+            >
+              <RotateCcw size={11} />
+              {restoring
+                ? (no ? 'Gjenoppretter...' : 'Restoring...')
+                : (no ? 'Gjenopprett kjøp' : 'Restore purchases')}
+            </button>
+          )}
+
+          <p className="text-slate-600 text-xs text-center mt-2">
             {no
-              ? 'Betaling via App Store. Apple tar 15-30% provisjon.'
-              : 'Billed via App Store. Apple takes 15-30% fee.'}
+              ? 'Betaling via App Store. Avslutt når som helst.'
+              : 'Billed via App Store. Cancel anytime.'}
           </p>
         </div>
 

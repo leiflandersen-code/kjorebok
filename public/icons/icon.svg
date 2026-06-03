@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="230" fill="#0F172A"/>
+
+  <!-- Glow -->
+  <ellipse cx="512" cy="560" rx="320" ry="200" fill="#22c55e" opacity="0.08"/>
+
+  <!-- Road line -->
+  <rect x="470" y="580" width="84" height="16" rx="8" fill="#334155"/>
+  <rect x="470" y="620" width="84" height="16" rx="8" fill="#334155"/>
+  <rect x="470" y="660" width="84" height="16" rx="8" fill="#334155"/>
+
+  <!-- Car body -->
+  <rect x="280" y="490" width="464" height="180" rx="28" fill="#1E293B"/>
+
+  <!-- Car roof -->
+  <path d="M370 490 L420 360 L604 360 L654 490 Z" fill="#1E293B"/>
+  <path d="M390 490 L432 380 L592 380 L634 490 Z" fill="#0F172A" opacity="0.5"/>
+
+  <!-- Windows -->
+  <rect x="408" y="388" width="90" height="88" rx="10" fill="#22c55e" opacity="0.25"/>
+  <rect x="516" y="388" width="90" height="88" rx="10" fill="#22c55e" opacity="0.25"/>
+
+  <!-- Green stripe -->
+  <rect x="280" y="530" width="464" height="6" rx="3" fill="#22c55e"/>
+
+  <!-- Wheels -->
+  <circle cx="370" cy="668" r="58" fill="#0F172A" stroke="#334155" stroke-width="8"/>
+  <circle cx="370" cy="668" r="32" fill="#1E293B"/>
+  <circle cx="370" cy="668" r="12" fill="#22c55e"/>
+
+  <circle cx="654" cy="668" r="58" fill="#0F172A" stroke="#334155" stroke-width="8"/>
+  <circle cx="654" cy="668" r="32" fill="#1E293B"/>
+  <circle cx="654" cy="668" r="12" fill="#22c55e"/>
+
+  <!-- Headlights -->
+  <rect x="280" y="530" width="36" height="24" rx="8" fill="#22c55e" opacity="0.9"/>
+  <rect x="280" y="530" width="36" height="24" rx="8" fill="#ffffff" opacity="0.3"/>
+
+  <!-- Taillights -->
+  <rect x="708" y="530" width="36" height="24" rx="8" fill="#ef4444" opacity="0.8"/>
+
+  <!-- Location pin above car -->
+  <circle cx="512" cy="270" r="48" fill="#22c55e"/>
+  <circle cx="512" cy="270" r="20" fill="#0F172A"/>
+  <path d="M512 318 L492 290 L532 290 Z" fill="#22c55e"/>
+</svg>
