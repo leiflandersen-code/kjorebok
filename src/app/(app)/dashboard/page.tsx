@@ -1,19 +1,19 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTripStore } from '@/store/tripStore'
 import { useGPS } from '@/hooks/useGPS'
-import { haversineKm, calculateReimbursement } from '@/lib/distance'
+import { useGPSTracking } from '@/hooks/useGPSTracking'
+import { calculateReimbursement } from '@/lib/distance'
 import { reverseGeocode } from '@/lib/geocoding'
 import { SyncBadge } from '@/components/layout/SyncBadge'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
-import type { Profile, Vehicle, Trip, TripCategory } from '@/types'
-import { MapPin, Clock, Car, TrendingUp, Euro, AlertTriangle } from 'lucide-react'
+import type { Profile, Vehicle, TripCategory } from '@/types'
+import { MapPin, Clock, TrendingUp, Euro, AlertTriangle, Navigation } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 
 const CATEGORIES: TripCategory[] = [
@@ -30,7 +30,10 @@ function formatDuration(start: string): string {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { activeTrip, startTrip, stopTrip, updateActiveCategory } = useTripStore()
+  const {
+    activeTrip, accumulatedKm, lastLat, lastLng,
+    startTrip, stopTrip, updateActiveCategory,
+  } = useTripStore()
   const { loading: gpsLoading, getPosition } = useGPS()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -40,9 +43,10 @@ export default function DashboardPage() {
   const [stopping, setStopping] = useState(false)
   const [startAddress, setStartAddress] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  // Start continuous GPS tracking when trip is active
+  useGPSTracking()
+
+  useEffect(() => { loadData() }, [])
 
   useEffect(() => {
     if (!activeTrip) return
@@ -99,7 +103,7 @@ export default function DashboardPage() {
         synced: false,
       }
       startTrip(trip)
-      toast.success('Tur startet')
+      toast.success('Tur startet — GPS-sporing aktiv')
       reverseGeocode(pos.lat, pos.lng).then((addr) => setStartAddress(addr))
     } catch {
       toast.error('Kunne ikke hente GPS-posisjon. Sjekk tillatelser.')
@@ -111,16 +115,15 @@ export default function DashboardPage() {
     setStopping(true)
 
     try {
-      const pos = await getPosition()
-      const km = activeTrip.startLat && activeTrip.startLng
-        ? haversineKm(activeTrip.startLat, activeTrip.startLng, pos.lat, pos.lng)
-        : 0
+      const stopLat = lastLat
+      const stopLng = lastLng
+      const km = Math.round(accumulatedKm * 100) / 100
       const rate = 0.26
       const reimbursement = calculateReimbursement(km, rate, 0, 0, 0)
 
-      const [stopAddress] = await Promise.all([
-        reverseGeocode(pos.lat, pos.lng),
-      ])
+      const stopAddress = stopLat && stopLng
+        ? await reverseGeocode(stopLat, stopLng)
+        : null
 
       const supabase = createClient()
       const tripData = {
@@ -131,8 +134,8 @@ export default function DashboardPage() {
         stop_time: new Date().toISOString(),
         start_lat: activeTrip.startLat,
         start_lng: activeTrip.startLng,
-        stop_lat: pos.lat,
-        stop_lng: pos.lng,
+        stop_lat: stopLat,
+        stop_lng: stopLng,
         start_address: startAddress,
         stop_address: stopAddress,
         calculated_distance_km: km,
@@ -150,7 +153,7 @@ export default function DashboardPage() {
       if (error) throw error
 
       stopTrip()
-      toast.success(`Tur lagret: ${km.toFixed(1)} km`)
+      toast.success(`Tur lagret: ${km.toFixed(2)} km`)
       router.push(`/trip/${activeTrip.id}`)
     } catch {
       toast.error('Feil ved lagring. Prøv igjen.')
@@ -158,6 +161,8 @@ export default function DashboardPage() {
       setStopping(false)
     }
   }
+
+  const liveReimbursement = calculateReimbursement(accumulatedKm, 0.26, 0, 0, 0)
 
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
@@ -185,8 +190,27 @@ export default function DashboardPage() {
               <span className="text-green-400 font-semibold text-sm">Tur pågår</span>
               <span className="text-green-300 font-mono text-sm ml-auto">{timer}</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-300 text-sm mb-1">
-              <Clock size={14} />
+
+            {/* Live km counter */}
+            <div className="flex items-end gap-3 mb-3">
+              <div>
+                <span className="text-4xl font-bold text-white tabular-nums">
+                  {accumulatedKm.toFixed(2)}
+                </span>
+                <span className="text-slate-400 text-sm ml-1">km</span>
+              </div>
+              <div className="pb-1">
+                <span className="text-green-400 font-semibold">
+                  € {liveReimbursement.toFixed(2)}
+                </span>
+              </div>
+              <div className="ml-auto pb-1">
+                <Navigation size={16} className="text-green-400 animate-pulse" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-slate-300 text-xs mb-1">
+              <Clock size={12} />
               <span>Startet {new Date(activeTrip.startTime).toLocaleTimeString('nb-NO')}</span>
             </div>
             {startAddress && (
@@ -198,7 +222,7 @@ export default function DashboardPage() {
             {!startAddress && <div className="mb-3" />}
 
             {/* Category selector during trip */}
-            <div className="flex flex-wrap gap-1 mb-4">
+            <div className="flex flex-wrap gap-1">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
@@ -220,13 +244,8 @@ export default function DashboardPage() {
       {/* Main action button */}
       {!activeTrip ? (
         <div className="mb-6">
-          {/* Vehicle selector */}
           {vehicles.length > 1 && (
             <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Car size={16} className="text-slate-400" />
-                <span className="text-slate-400 text-sm">Kjøretøy</span>
-              </div>
               <div className="flex gap-2">
                 {vehicles.map((v) => (
                   <button
@@ -269,10 +288,10 @@ export default function DashboardPage() {
           disabled={stopping || gpsLoading}
           className="w-full h-20 text-xl font-bold bg-red-500 hover:bg-red-400 text-white rounded-2xl mb-6 cursor-pointer transition-transform active:scale-95"
         >
-          {stopping || gpsLoading ? (
+          {stopping ? (
             <span className="flex items-center gap-2">
               <MapPin size={24} className="animate-bounce" />
-              {gpsLoading ? 'Henter GPS...' : 'Lagrer...'}
+              Lagrer...
             </span>
           ) : (
             <span className="flex items-center gap-2">
